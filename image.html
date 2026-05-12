@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 绘画 - AI 生成聚合</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0F111A',
+                            card: 'rgba(25, 28, 41, 0.7)',
+                        },
+                        cyan: {
+                            highlight: '#00F5FF',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F111A;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 245, 255, 0.05) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 40 L40 40 L40 0 M0 0 L0 40' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+            background-attachment: fixed;
+        }
+        .glass {
+            background: rgba(25, 28, 41, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .text-gradient {
+            background: linear-gradient(to right, #00F5FF, #00D1FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spinner {
+            border: 2px solid rgba(0, 245, 255, 0.1);
+            border-top: 2px solid #00F5FF;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-200 antialiased">
+    <!-- NavBar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-[#0F111A] border-b border-white/10 h-16">
+        <div class="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-cyan-highlight rounded-lg flex items-center justify-center">
+                    <span class="text-dark-bg font-bold text-sm">AI</span>
+                </div>
+                <span class="text-xl font-bold text-white tracking-tight">AI 生成聚合</span>
+            </div>
+            <div class="flex items-center space-x-8">
+                <a href="image.html" class="flex items-center space-x-2 h-16 border-b-2 border-cyan-highlight text-cyan-highlight transition-all duration-300">
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    <span class="font-medium">AI 绘画</span>
+                </a>
+                <a href="video.html" class="flex items-center space-x-2 h-16 border-b-2 border-transparent text-gray-400 hover:text-white transition-all duration-300">
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                    <span class="font-medium">AI 视频</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="pt-24 pb-12 px-4 flex flex-col items-center min-h-screen fade-in">
+        <div class="w-full max-w-[640px] glass rounded-3xl p-8 shadow-2xl">
+            <h1 class="text-2xl font-bold mb-6 text-gradient">AI 绘画生成</h1>
+            
+            <!-- Prompt Input -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-400 mb-2">提示词 (Prompt)</label>
+                <textarea id="prompt" placeholder="输入你想要生成的画面描述…" class="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-highlight/50 transition-all resize-none leading-relaxed"></textarea>
+                <div class="flex justify-between mt-2 text-xs">
+                    <span id="char-count" class="text-gray-500">0 / 500</span>
+                    <span id="error-msg" class="text-red-500 hidden">字数超出上限</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <!-- Ratio Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">图片比例</label>
+                    <div class="flex space-x-3">
+                        <button onclick="setRatio('1:1')" id="ratio-1-1" class="ratio-btn flex-1 py-2 px-4 rounded-lg border bg-cyan-highlight/10 border-cyan-highlight text-cyan-highlight transition-all text-sm">1:1</button>
+                        <button onclick="setRatio('16:9')" id="ratio-16-9" class="ratio-btn flex-1 py-2 px-4 rounded-lg border bg-white/5 border-white/10 text-gray-400 hover:border-white/20 transition-all text-sm">16:9</button>
+                    </div>
+                </div>
+
+                <!-- Model Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">模型选择</label>
+                    <select id="model" class="w-full bg-[#1A1D29] border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-highlight/50">
+                        <option>Stable Diffusion XL</option>
+                        <option>Stable Diffusion 2.1</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <button id="generate-btn" onclick="handleGenerate()" class="w-full py-4 bg-cyan-highlight text-[#0F111A] font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] mb-8 flex items-center justify-center space-x-2">
+                <span>生成图片</span>
+            </button>
+
+            <!-- Result Area -->
+            <div id="result-area" class="hidden space-y-4 fade-in">
+                <div id="image-container" class="relative overflow-hidden rounded-xl border border-white/10 bg-black/20 aspect-square">
+                    <img id="result-img" src="" alt="Generated AI" class="w-full h-full object-cover">
+                </div>
+                <button onclick="handleDownload()" class="w-full py-3 flex items-center justify-center space-x-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>下载高清图片</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        let currentRatio = '1:1';
+        const MAX_CHARS = 500;
+        const promptInput = document.getElementById('prompt');
+        const charCount = document.getElementById('char-count');
+        const errorMsg = document.getElementById('error-msg');
+        const generateBtn = document.getElementById('generate-btn');
+        const resultArea = document.getElementById('result-area');
+        const resultImg = document.getElementById('result-img');
+        const imageContainer = document.getElementById('image-container');
+
+        promptInput.addEventListener('input', () => {
+            const length = promptInput.value.length;
+            charCount.textContent = `${length} / ${MAX_CHARS}`;
+            if (length > MAX_CHARS) {
+                promptInput.classList.add('border-red-500');
+                charCount.classList.add('text-red-500');
+                errorMsg.classList.remove('hidden');
+            } else {
+                promptInput.classList.remove('border-red-500');
+                charCount.classList.remove('text-red-500');
+                errorMsg.classList.add('hidden');
+            }
+        });
+
+        function setRatio(ratio) {
+            currentRatio = ratio;
+            document.querySelectorAll('.ratio-btn').forEach(btn => {
+                btn.classList.remove('bg-cyan-highlight/10', 'border-cyan-highlight', 'text-cyan-highlight');
+                btn.classList.add('bg-white/5', 'border-white/10', 'text-gray-400');
+            });
+            const activeBtn = document.getElementById(`ratio-${ratio.replace(':', '-')}`);
+            activeBtn.classList.add('bg-cyan-highlight/10', 'border-cyan-highlight', 'text-cyan-highlight');
+            activeBtn.classList.remove('bg-white/5', 'border-white/10', 'text-gray-400');
+            
+            if (ratio === '1:1') {
+                imageContainer.classList.add('aspect-square');
+                imageContainer.classList.remove('aspect-video');
+            } else {
+                imageContainer.classList.remove('aspect-square');
+                imageContainer.classList.add('aspect-video');
+            }
+        }
+
+        async function handleGenerate() {
+            const prompt = promptInput.value.trim();
+            if (!prompt || prompt.length > MAX_CHARS) return;
+
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<div class="spinner"></div><span>生成中...</span>';
+            resultArea.classList.add('hidden');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt, 
+                        ratio: currentRatio, 
+                        model: document.getElementById('model').value 
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    resultImg.src = data.url;
+                    resultArea.classList.remove('hidden');
+                } else {
+                    alert(`生成失败: ${data.message}`);
+                }
+            } catch (error) {
+                alert('请求后端服务失败，请确保 server.js 已启动');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<span>生成图片</span>';
+            }
+        }
+
+        async function handleDownload() {
+            const url = resultImg.src;
+            if (!url) return;
+            // 使用后端代理下载，绕过跨域限制
+            const proxyUrl = `http://localhost:3000/api/proxy-download?url=${encodeURIComponent(url)}`;
+            window.location.href = proxyUrl;
+        }
+    </script>
+</body>
+</html>
