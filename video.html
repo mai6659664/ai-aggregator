@@ -166,7 +166,7 @@
             resultArea.classList.add('hidden');
 
             try {
-                const response = await fetch('http://localhost:3000/api/generate-video', {
+                const response = await fetch('/api/generate-video', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -194,7 +194,7 @@
             const url = resultVideo.src;
             if (!url) return;
             // 使用后端代理下载，绕过跨域限制
-            const proxyUrl = `http://localhost:3000/api/proxy-download?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(url)}`;
             window.location.href = proxyUrl;
         }
     </script>
